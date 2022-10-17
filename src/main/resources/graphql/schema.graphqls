@@ -23,11 +23,6 @@ type Person {
     yearOfBirth: Int
 }
 
-input PersonInput{
-    name: String!
-    yearOfBirth: Int
-}
-
 type Mutation{
     addPerson(name: String!, yearOfBirth: Int): Person
     deletePersonByName(name: String!): Int
