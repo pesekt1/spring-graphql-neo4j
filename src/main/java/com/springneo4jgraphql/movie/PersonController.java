@@ -6,10 +6,10 @@ import org.springframework.stereotype.Controller;
 
 @Controller
 public class PersonController {
-    private final PersonRepository personRepository;
+    private final PersonService personService;
 
-    public PersonController(PersonRepository personRepository) {
-        this.personRepository = personRepository;
+    public PersonController(PersonService personService) {
+        this.personService = personService;
     }
 
     @MutationMapping
@@ -18,7 +18,6 @@ public class PersonController {
             @Argument Integer yearOfBirth)
  {
         System.out.println("Saving person: " + name);
-        Person person = new Person(name, yearOfBirth);
-        return personRepository.save(person);
+        return personService.save(new Person(name, yearOfBirth));
     }
 }
