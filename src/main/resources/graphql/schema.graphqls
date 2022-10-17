@@ -4,6 +4,7 @@ type Query {
     persons: [Person]
     personByName(name: String!) : Person
     personsByYearOfBirth(yearOfBirth: Int!) : [Person]
+    moviesByActor(name: String!) : [Movie]
 }
 
 type Movie {
@@ -22,8 +23,17 @@ type Person {
     yearOfBirth: Int
 }
 
+input PersonInput{
+    name: String!
+    yearOfBirth: Int
+}
+
 type Mutation{
     addPerson(name: String!, yearOfBirth: Int): Person
-    deleteAllPersonsByName(name: String!): Int
+    deletePersonByName(name: String!): Int
+    addMovie(title: String!, description: String!) : Movie
+    deleteMovieByTitle(title: String!): Int
+    addActorToMovie(title: String!, actorName: String!, role: String!): Movie
+    removeActorFromMovie(title: String!, actorName: String!): [Movie]
 }
 

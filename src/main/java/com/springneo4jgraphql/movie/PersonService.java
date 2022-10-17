@@ -17,6 +17,6 @@ public class PersonService {
     }
 
     public Long deleteByName(String name){
-        return personRepository.deleteAllByName(name);
+        return personRepository.deleteByName(name);
     }
 }

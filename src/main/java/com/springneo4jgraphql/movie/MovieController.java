@@ -1,9 +1,15 @@
 package com.springneo4jgraphql.movie;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.graphql.data.method.annotation.Argument;
+import org.springframework.graphql.data.method.annotation.MutationMapping;
+import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.graphql.data.method.annotation.SchemaMapping;
 import org.springframework.stereotype.Controller;
 import reactor.core.publisher.Mono;
+
+import java.util.Collection;
+import java.util.List;
 
 @Controller
 public class MovieController {
@@ -36,4 +42,29 @@ public class MovieController {
         return this.movieService.getPopularity(movie);
     }
 
+    @MutationMapping
+    public Movie addMovie(@Argument String title, @Argument String description) {
+        System.out.println("Saving movie: " + title);
+        return movieService.save(new Movie(title, description, null, null));
+    }
+
+    @MutationMapping
+    public Long deleteMovieByTitle(@Argument String title){
+        return movieService.deleteByTitle(title);
+    }
+
+    @MutationMapping
+    public Movie addActorToMovie(@Argument String title, @Argument String actorName, @Argument String role) {
+        return movieService.addActor(title, actorName, role);
+    }
+
+    @MutationMapping
+    public List<Movie> removeActorFromMovie(@Argument String title, @Argument String actorName) {
+        return movieService.removeActor(title, actorName);
+    }
+
+    @QueryMapping
+    public Collection<Movie> moviesByActor(@Argument String name){
+        return movieService.getMoviesByActor(name);
+    }
 }

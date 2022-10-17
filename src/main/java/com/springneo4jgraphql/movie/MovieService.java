@@ -1,5 +1,6 @@
 package com.springneo4jgraphql.movie;
 
+import org.neo4j.cypherdsl.core.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.json.JacksonJsonParser;
 import org.springframework.stereotype.Service;
@@ -11,6 +12,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -18,8 +20,14 @@ import java.util.concurrent.CompletableFuture;
 @Service
 public class MovieService {
 
+    private final MovieRepository movieRepository;
+
     @Value("${tmdb_api}")
     String apiKey;
+
+    public MovieService(MovieRepository movieRepository) {
+        this.movieRepository = movieRepository;
+    }
 
     private CompletableFuture<HttpResponse<String>> getMovie(Movie movie){
         URI uri = URI.create("https://api.themoviedb.org/3/search/movie?api_key=" + apiKey + "&query=" + URLEncoder.encode(movie.getTitle(), StandardCharsets.UTF_8));
@@ -64,4 +72,36 @@ public class MovieService {
         return Mono.fromCompletionStage(futureResponse);
     }
 
+    public Movie save(Movie movie){
+        return movieRepository.save(movie);
+    }
+
+    public Long deleteByTitle(String title){
+        return movieRepository.deleteByTitle(title);
+    }
+
+    public Movie addActor(String title, String actorName, String role) {
+        return movieRepository.addActor(title, actorName, role);
+    }
+    public List<Movie> removeActor(String title, String actorName) {
+        var result = movieRepository.removeActor(title, actorName);
+        System.out.println(result);
+        return result;
+    }
+
+    //CypherdslConditionExecutor
+    static Statement getMoviesByActorQuery(String name){
+        Node m = Cypher.node("Movie").named("m");
+        Node p = Cypher.anyNode("p");
+        Relationship r = p.relationshipTo(m, "ACTED_IN");
+        return Cypher.match(r)
+                .where(p.property("name").isEqualTo(Cypher.anonParameter(name)))
+                .returning(Functions.collect(m))
+                .build();
+    }
+
+    //CypherdslConditionExecutor
+    Collection<Movie> getMoviesByActor(String name){
+        return movieRepository.findAll(getMoviesByActorQuery(name));
+    }
 }

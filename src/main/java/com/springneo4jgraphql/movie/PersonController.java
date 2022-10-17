@@ -23,7 +23,7 @@ public class PersonController {
     }
 
     @MutationMapping
-    public Long deleteAllPersonsByName(@Argument String name){
+    public Long deletePersonByName(@Argument String name){
         return personService.deleteByName(name);
     }
 }
