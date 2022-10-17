@@ -17,6 +17,12 @@ spring.neo4j.uri=neo4j://localhost:7687
 spring.neo4j.authentication.username=neo4j
 spring.neo4j.authentication.password=secret
 spring.neo4j.authentication.database=<DB_NAME>
+
+#themoviedb.org API_KEY
+tmdb_api=${TMDB_API}
+
+#logging CYPHER queries
+logging.level.org.springframework.data.neo4j=debug
 ----
 
 When you start the application, the example movie data set will get published to the database.
