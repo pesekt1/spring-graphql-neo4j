@@ -18,13 +18,14 @@ spring.neo4j.authentication.username=neo4j
 spring.neo4j.authentication.password=secret
 spring.neo4j.authentication.database=<DB_NAME>
 
-#themoviedb.org API_KEY
+#themoviedb.org API_KEY - create an account and get your API KEY.
 tmdb_api=${TMDB_API}
 
 #logging CYPHER queries
 logging.level.org.springframework.data.neo4j=debug
 ----
 
+DataBootstrapper.java - uncomment everything in the file:
 When you start the application, the example movie data set will get published to the database.
 
 [source,shell]
@@ -42,12 +43,19 @@ The current schema looks like this:
 type Query {
     movies : [Movie]
     movie(title : String!) : Movie
+    persons: [Person]
+    personByName(name: String!) : Person
+    personsByYearOfBirth(yearOfBirth: Int!) : [Person]
+    moviesByActor(name: String!) : [Movie]
 }
 
 type Movie {
     title: String!
     description : String!
     overview: String
+    originalTitle: String
+    releaseDate: String
+    popularity: Float
     actors: [Person]
     directors: [Person]
 }
@@ -55,6 +63,15 @@ type Movie {
 type Person {
     name: String!
     yearOfBirth: Int
+}
+
+type Mutation{
+    addPerson(name: String!, yearOfBirth: Int): Person
+    deletePersonByName(name: String!): Int
+    addMovie(title: String!, description: String!) : Movie
+    deleteMovieByTitle(title: String!): Int
+    addActorToMovie(title: String!, actorName: String!, role: String!): Movie
+    removeActorFromMovie(title: String!, actorName: String!): [Movie]
 }
 ----
 
@@ -129,6 +146,41 @@ will return:
 It is possible to aggregate the data from different sources.
 For example the `overview` field of the `Movie` will get fetched from https://www.themoviedb.org/.
 
+[source,java]
+----
+@Service
+public class MovieService {
+
+    private final MovieRepository movieRepository;
+
+    @Value("${tmdb_api}") String apiKey;
+
+    private CompletableFuture<HttpResponse<String>> getMovie(Movie movie){
+        URI uri = URI.create("https://api.themoviedb.org/3/search/movie?api_key=" + apiKey + "&query=" + URLEncoder         .encode(movie.getTitle(), StandardCharsets.UTF_8));
+
+        return HttpClient.newHttpClient().sendAsync(
+                HttpRequest.newBuilder().uri(uri).build(),
+                HttpResponse.BodyHandlers.ofString());
+    }
+
+    private List<Object> getResults(HttpResponse<String> response){
+       return (List<Object>) new JacksonJsonParser().parseMap(response.body()).get("results");
+    }
+
+    public Mono<String> getOverview(Movie movie) {
+        CompletableFuture<String> futureResponse = getMovie(movie)
+                .thenApply(response -> {
+                    List<Object> results = getResults(response);
+                    if (results.isEmpty()) {
+                        return "no overview found";
+                    }
+                    return (String) ((Map<String, Object>) results.get(0)).get("overview");
+                });
+        return Mono.fromCompletionStage(futureResponse);
+    }
+----
+
+
 [source,graphql]
 .Query movie with field from other source
 ----
@@ -150,3 +202,60 @@ returns
 ----
 
 NOTE: instead of delivering the value of the field, we could _just_ provide a link for the GraphQL client to get the data itself.
+
+Mutations - example:
+
+[source, graphql]
+----
+mutation {
+  addActorToMovie(title: "The Matrix", actorName: "Tomas Pesek", role: "Test role2"){
+    title
+    description
+  }
+}
+----
+
+Native cypher queries:
+[source, java]
+----
+@GraphQlRepository
+public interface MovieRepository extends
+Neo4jRepository<Movie, String>{
+    @Query("""
+            MATCH (m:Movie {title: $title})
+            MATCH (p:Person {name: $actorName})
+            Match (p)-[r:ACTED_IN]->(m)
+            DELETE r
+            RETURN m""")
+    List<Movie> removeActor(
+            @Param("title") String title,
+            @Param("actorName") String actorName);
+}
+----
+
+Cypher dsl Condition Executor queries:
+Query builder - NOTE: the repository must extend CypherdslConditionExecutor<Movie>
+We create a statement and then we insert it as an argument into findAll() method:
+[source, java]
+----
+@Service
+public class MovieService {
+    private final MovieRepository movieRepository;
+
+    //CypherdslConditionExecutor
+    static Statement getMoviesByActorQuery(String name){
+        Node m = Cypher.node("Movie").named("m");
+        Node p = Cypher.anyNode("p");
+        Relationship r = p.relationshipTo(m, "ACTED_IN");
+        return Cypher.match(r)
+                .where(p.property("name").isEqualTo(Cypher.anonParameter(name)))
+                .returning(Functions.collect(m))
+                .build();
+    }
+
+    //CypherdslConditionExecutor
+    Collection<Movie> getMoviesByActor(String name){
+        return movieRepository.findAll(getMoviesByActorQuery(name));
+    }
+}
+----
