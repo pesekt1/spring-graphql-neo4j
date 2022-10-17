@@ -24,5 +24,6 @@ type Person {
 
 type Mutation{
     addPerson(name: String!, yearOfBirth: Int): Person
+    deleteAllPersonsByName(name: String!): Int
 }
 
