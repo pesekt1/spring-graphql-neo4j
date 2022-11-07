@@ -8,17 +8,21 @@ import org.springframework.graphql.data.method.annotation.SchemaMapping;
 import org.springframework.stereotype.Controller;
 import reactor.core.publisher.Mono;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 public class MovieController {
 
     private final MovieService movieService;
+    private final PersonRepository personRepository;
 
     @Autowired
-    public MovieController(MovieService movieService) {
+    public MovieController(MovieService movieService, PersonRepository personRepository) {
         this.movieService = movieService;
+        this.personRepository = personRepository;
     }
 
     //adding a field "overview" to Movie model - it will be accessible via graphql
@@ -40,6 +44,17 @@ public class MovieController {
     @SchemaMapping(typeName = "Movie", field = "popularity")
     private Mono<Double> popularity(Movie movie) {
         return this.movieService.getPopularity(movie);
+    }
+
+    @SchemaMapping(typeName = "Movie", field = "actors")
+    private List<Person> actors(Movie movie) {
+       return this.personRepository.actorByMovie(movie.getTitle());
+
+    }
+
+    @SchemaMapping(typeName = "Movie", field = "directors")
+    private List<Person> directors(Movie movie) {
+        return this.personRepository.directorByMovie(movie.getTitle());
     }
 
     @MutationMapping
