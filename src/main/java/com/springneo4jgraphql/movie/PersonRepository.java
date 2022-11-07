@@ -16,7 +16,7 @@ public interface PersonRepository extends Neo4jRepository<Person, String>{
             MATCH (p:Person)
             Match (p)-[r:ACTED_IN]->(m)
             return p,r.roles""")
-    List<Object> actorByMovie(@Param("title") String title);
+    List<Person> actorByMovie(@Param("title") String title);
 
     @Query("""
             MATCH (m:Movie {title: $title})
